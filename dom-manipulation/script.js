@@ -279,11 +279,11 @@ function showMessageBox(message) {
 }
 
 /**
- * Fetches quotes from the simulated server.
- * Maps the server response (jsonplaceholder posts) to the quote format.
- * Then calls mergeAndSyncQuotes to reconcile with local data.
+ * Fetches quotes from the simulated server and merges them with local quotes.
+ * Server data takes precedence in case of discrepancies. This function effectively
+ * performs the data synchronization.
  */
-async function fetchQuotesFromServer() {
+async function syncQuotes() { // Renamed from mergeAndSyncQuotes
     try {
         showMessageBox("Syncing with server...", true); // Show loading message
         const response = await fetch(SERVER_URL);
@@ -299,14 +299,45 @@ async function fetchQuotesFromServer() {
         }));
 
         console.log('Fetched quotes from server:', serverQuotes);
-        mergeAndSyncQuotes(serverQuotes);
-        showMessageBox("Sync complete: Data updated from server.");
+
+        let updatesCount = 0;
+        let newQuotesCount = 0;
+
+        serverQuotes.forEach(sQuote => {
+            const localIndex = quotes.findIndex(lQuote => lQuote.text === sQuote.text); // Simple match by text
+
+            if (localIndex > -1) {
+                // Conflict: Quote exists locally. Server data takes precedence.
+                // Check if content is different before updating
+                if (quotes[localIndex].category !== sQuote.category || quotes[localIndex].text !== sQuote.text) {
+                    quotes[localIndex] = { ...sQuote }; // Overwrite with server version
+                    updatesCount++;
+                    console.log('Updated existing quote from server:', sQuote.text);
+                }
+            } else {
+                // No conflict: New quote from server. Add it.
+                quotes.push({ ...sQuote });
+                newQuotesCount++;
+                console.log('Added new quote from server:', sQuote.text);
+            }
+        });
+
+        saveQuotes(); // Save the merged quotes to local storage
+        populateCategories(); // Re-populate categories in case new ones were added
+        filterQuotes(); // Re-apply filter and refresh display
+
+        if (updatesCount > 0 || newQuotesCount > 0) {
+            showMessageBox(`Sync successful! ${newQuotesCount} new quotes added, ${updatesCount} existing quotes updated.`);
+        } else {
+            showMessageBox("Sync successful! No new updates from server.");
+        }
 
     } catch (error) {
         console.error('Failed to fetch quotes from server:', error);
         showMessageBox(`Sync failed: ${error.message}`);
     }
 }
+
 
 /**
  * Simulates posting a new quote to the server.
@@ -342,44 +373,6 @@ async function postQuoteToServer(quote) {
     }
 }
 
-/**
- * Merges server quotes with local quotes. Server data takes precedence.
- * @param {Array} serverQuotes - Quotes fetched from the server.
- */
-function mergeAndSyncQuotes(serverQuotes) {
-    let updatesCount = 0;
-    let newQuotesCount = 0;
-
-    serverQuotes.forEach(sQuote => {
-        const localIndex = quotes.findIndex(lQuote => lQuote.text === sQuote.text); // Simple match by text
-
-        if (localIndex > -1) {
-            // Conflict: Quote exists locally. Server data takes precedence.
-            // Check if content is different before updating
-            if (quotes[localIndex].category !== sQuote.category || quotes[localIndex].text !== sQuote.text) {
-                quotes[localIndex] = { ...sQuote }; // Overwrite with server version
-                updatesCount++;
-                console.log('Updated existing quote from server:', sQuote.text);
-            }
-        } else {
-            // No conflict: New quote from server. Add it.
-            quotes.push({ ...sQuote });
-            newQuotesCount++;
-            console.log('Added new quote from server:', sQuote.text);
-        }
-    });
-
-    saveQuotes(); // Save the merged quotes to local storage
-    populateCategories(); // Re-populate categories in case new ones were added
-    filterQuotes(); // Re-apply filter and refresh display
-
-    if (updatesCount > 0 || newQuotesCount > 0) {
-        showMessageBox(`Sync successful! ${newQuotesCount} new quotes added, ${updatesCount} existing quotes updated.`);
-    } else {
-        showMessageBox("Sync successful! No new updates from server.");
-    }
-}
-
 
 // --- Event Listeners ---
 
@@ -401,7 +394,7 @@ if (importFileInput) {
 
 // Add event listener for "Sync Now" button
 if (syncNowButton) {
-    syncNowButton.addEventListener('click', fetchQuotesFromServer);
+    syncNowButton.addEventListener('click', syncQuotes); // Updated call to syncQuotes
 }
 
 // Event listener for category filter change is handled by onchange attribute in HTML: onchange="filterQuotes()"
@@ -450,5 +443,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Start periodic synchronization
-    setInterval(fetchQuotesFromServer, SYNC_INTERVAL);
+    setInterval(syncQuotes, SYNC_INTERVAL); // Updated call to syncQuotes
 });
