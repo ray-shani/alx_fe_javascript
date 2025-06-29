@@ -23,6 +23,16 @@
             <p id="quoteCategory" class="text-lg text-purple-700 mt-2">- Steve Jobs (Inspiration)</p>
         </div>
 
+        <!-- Category Filter Section -->
+        <div class="w-full space-y-2 text-center">
+            <label for="categoryFilter" class="block text-gray-700 text-sm font-bold mb-1">Filter by Category:</label>
+            <select id="categoryFilter" onchange="filterQuotes()"
+                    class="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                <option value="all">All Categories</option>
+                <!-- Categories will be dynamically populated by JavaScript -->
+            </select>
+        </div>
+
         <!-- Button to Show New Quote -->
         <button id="newQuote" class="bg-purple-700 hover:bg-purple-800 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-300">
             Show New Quote
