@@ -5,6 +5,10 @@
 let quotes = [];
 let filteredQuotes = []; // New: Array to hold quotes after filtering
 
+// Simulated server endpoint (using JSONPlaceholder posts as a stand-in)
+const SERVER_URL = 'https://jsonplaceholder.typicode.com/posts';
+const SYNC_INTERVAL = 60000; // Sync every 60 seconds (60000 milliseconds)
+
 // Get references to DOM elements
 const quoteDisplayText = document.getElementById('quoteText');
 const quoteDisplayCategory = document.getElementById('quoteCategory');
@@ -14,7 +18,8 @@ const newQuoteCategoryInput = document.getElementById('newQuoteCategory');
 const addQuoteButton = document.getElementById('addQuoteButton');
 const exportQuotesButton = document.getElementById('exportQuotesButton');
 const importFileInput = document.getElementById('importFile');
-const categoryFilterSelect = document.getElementById('categoryFilter'); // New: Reference to category filter select
+const categoryFilterSelect = document.getElementById('categoryFilter');
+const syncNowButton = document.getElementById('syncNowButton'); // New: Reference to Sync Now button
 
 
 /**
@@ -138,8 +143,9 @@ function showRandomQuote(quoteList = filteredQuotes) {
  * Adds a new quote to the 'quotes' array based on user input from the form.
  * Clears the input fields after adding the quote, saves the updated array to local storage,
  * and updates the category dropdown.
+ * Also attempts to post the new quote to the simulated server.
  */
-function addQuote() {
+async function addQuote() {
     const quoteText = newQuoteTextInput.value.trim();
     const quoteCategory = newQuoteCategoryInput.value.trim();
 
@@ -162,6 +168,9 @@ function addQuote() {
     newQuoteCategoryInput.value = "";
 
     showMessageBox("Quote added successfully!");
+
+    // Attempt to post the new quote to the server
+    await postQuoteToServer(newQuote);
 }
 
 /**
@@ -203,7 +212,17 @@ function importFromJsonFile(event) {
         try {
             const importedQuotes = JSON.parse(e.target.result);
             if (Array.isArray(importedQuotes)) {
-                quotes.push(...importedQuotes); // Add new quotes
+                // For imported quotes, we assume they are new or meant to overwrite existing ones
+                // Simple merge: add new ones, overwrite existing ones if text matches (basic conflict resolution)
+                importedQuotes.forEach(impQuote => {
+                    const existingIndex = quotes.findIndex(q => q.text === impQuote.text);
+                    if (existingIndex > -1) {
+                        quotes[existingIndex] = impQuote; // Overwrite
+                    } else {
+                        quotes.push(impQuote); // Add new
+                    }
+                });
+
                 saveQuotes(); // Save combined quotes to local storage
                 populateCategories(); // Update categories dropdown
                 filterQuotes(); // Re-apply filter and show a quote from the updated list
@@ -259,11 +278,113 @@ function showMessageBox(message) {
     messageBox.classList.remove('hidden');
 }
 
+/**
+ * Fetches quotes from the simulated server.
+ * Maps the server response (jsonplaceholder posts) to the quote format.
+ * Then calls mergeAndSyncQuotes to reconcile with local data.
+ */
+async function fetchQuotesFromServer() {
+    try {
+        showMessageBox("Syncing with server...", true); // Show loading message
+        const response = await fetch(SERVER_URL);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const serverData = await response.json();
+
+        // Simulate a small subset of data or a specific format
+        const serverQuotes = serverData.slice(0, 10).map(post => ({ // Take first 10 for simplicity
+            text: post.title, // Using title as quote text
+            category: 'Server Quote' // Assign a default category for server-fetched
+        }));
+
+        console.log('Fetched quotes from server:', serverQuotes);
+        mergeAndSyncQuotes(serverQuotes);
+        showMessageBox("Sync complete: Data updated from server.");
+
+    } catch (error) {
+        console.error('Failed to fetch quotes from server:', error);
+        showMessageBox(`Sync failed: ${error.message}`);
+    }
+}
+
+/**
+ * Simulates posting a new quote to the server.
+ * For JSONPlaceholder, this maps to creating a new post.
+ * @param {object} quote - The quote object to post.
+ */
+async function postQuoteToServer(quote) {
+    try {
+        console.log('Attempting to post new quote to server:', quote);
+        const response = await fetch(SERVER_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            // JSONPlaceholder often echoes back the sent data with an ID
+            body: JSON.stringify({
+                title: quote.text,
+                body: `Category: ${quote.category}`,
+                userId: 1, // Example user ID
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log('Quote posted to server successfully:', responseData);
+        // Note: For a real app, you might re-fetch from server or update local quote with server ID
+    } catch (error) {
+        console.error('Failed to post quote to server:', error);
+        // showMessageBox(`Failed to post new quote to server: ${error.message}`); // Optional: notify user
+    }
+}
+
+/**
+ * Merges server quotes with local quotes. Server data takes precedence.
+ * @param {Array} serverQuotes - Quotes fetched from the server.
+ */
+function mergeAndSyncQuotes(serverQuotes) {
+    let updatesCount = 0;
+    let newQuotesCount = 0;
+
+    serverQuotes.forEach(sQuote => {
+        const localIndex = quotes.findIndex(lQuote => lQuote.text === sQuote.text); // Simple match by text
+
+        if (localIndex > -1) {
+            // Conflict: Quote exists locally. Server data takes precedence.
+            // Check if content is different before updating
+            if (quotes[localIndex].category !== sQuote.category || quotes[localIndex].text !== sQuote.text) {
+                quotes[localIndex] = { ...sQuote }; // Overwrite with server version
+                updatesCount++;
+                console.log('Updated existing quote from server:', sQuote.text);
+            }
+        } else {
+            // No conflict: New quote from server. Add it.
+            quotes.push({ ...sQuote });
+            newQuotesCount++;
+            console.log('Added new quote from server:', sQuote.text);
+        }
+    });
+
+    saveQuotes(); // Save the merged quotes to local storage
+    populateCategories(); // Re-populate categories in case new ones were added
+    filterQuotes(); // Re-apply filter and refresh display
+
+    if (updatesCount > 0 || newQuotesCount > 0) {
+        showMessageBox(`Sync successful! ${newQuotesCount} new quotes added, ${updatesCount} existing quotes updated.`);
+    } else {
+        showMessageBox("Sync successful! No new updates from server.");
+    }
+}
+
 
 // --- Event Listeners ---
 
 // Add event listener to the "Show New Quote" button
-newQuoteButton.addEventListener('click', () => showRandomQuote(filteredQuotes)); // Now passes filteredQuotes
+newQuoteButton.addEventListener('click', () => showRandomQuote(filteredQuotes));
 
 // Add event listener to the "Add Quote" button
 addQuoteButton.addEventListener('click', addQuote);
@@ -278,12 +399,16 @@ if (importFileInput) {
     importFileInput.addEventListener('change', importFromJsonFile);
 }
 
+// Add event listener for "Sync Now" button
+if (syncNowButton) {
+    syncNowButton.addEventListener('click', fetchQuotesFromServer);
+}
+
 // Event listener for category filter change is handled by onchange attribute in HTML: onchange="filterQuotes()"
 
 
 // --- Initial Page Load ---
 
-// Load quotes from local storage, populate categories, and apply last filter
 document.addEventListener('DOMContentLoaded', () => {
     loadQuotes(); // Load quotes from local storage
     populateCategories(); // Populate categories based on loaded quotes
@@ -323,4 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // If no last viewed quote, just show a random one from the initial filtered list
         showRandomQuote(filteredQuotes);
     }
+
+    // Start periodic synchronization
+    setInterval(fetchQuotesFromServer, SYNC_INTERVAL);
 });
