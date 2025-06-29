@@ -279,13 +279,12 @@ function showMessageBox(message) {
 }
 
 /**
- * Fetches quotes from the simulated server and merges them with local quotes.
- * Server data takes precedence in case of discrepancies. This function effectively
- * performs the data synchronization.
+ * Fetches quotes from the simulated server.
+ * Maps the server response (jsonplaceholder posts) to the quote format.
+ * @returns {Promise<Array>} A promise that resolves with an array of quotes from the server.
  */
-async function syncQuotes() { // Renamed from mergeAndSyncQuotes
+async function fetchQuotesFromServer() {
     try {
-        showMessageBox("Syncing with server...", true); // Show loading message
         const response = await fetch(SERVER_URL);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -297,8 +296,23 @@ async function syncQuotes() { // Renamed from mergeAndSyncQuotes
             text: post.title, // Using title as quote text
             category: 'Server Quote' // Assign a default category for server-fetched
         }));
-
         console.log('Fetched quotes from server:', serverQuotes);
+        return serverQuotes;
+
+    } catch (error) {
+        console.error('Failed to fetch quotes from server:', error);
+        throw error; // Re-throw to be handled by syncQuotes
+    }
+}
+
+/**
+ * Synchronizes local quotes with server quotes. Server data takes precedence.
+ * Fetches data from the server, then merges it with local data, resolving conflicts.
+ */
+async function syncQuotes() {
+    try {
+        showMessageBox("Syncing with server...", true); // Show loading message
+        const serverQuotes = await fetchQuotesFromServer(); // Call the separate fetch function
 
         let updatesCount = 0;
         let newQuotesCount = 0;
@@ -333,7 +347,7 @@ async function syncQuotes() { // Renamed from mergeAndSyncQuotes
         }
 
     } catch (error) {
-        console.error('Failed to fetch quotes from server:', error);
+        console.error('Synchronization failed:', error);
         showMessageBox(`Sync failed: ${error.message}`);
     }
 }
@@ -394,7 +408,7 @@ if (importFileInput) {
 
 // Add event listener for "Sync Now" button
 if (syncNowButton) {
-    syncNowButton.addEventListener('click', syncQuotes); // Updated call to syncQuotes
+    syncNowButton.addEventListener('click', syncQuotes);
 }
 
 // Event listener for category filter change is handled by onchange attribute in HTML: onchange="filterQuotes()"
@@ -443,5 +457,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Start periodic synchronization
-    setInterval(syncQuotes, SYNC_INTERVAL); // Updated call to syncQuotes
+    setInterval(syncQuotes, SYNC_INTERVAL);
 });
