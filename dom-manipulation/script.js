@@ -341,9 +341,9 @@ async function syncQuotes() {
         filterQuotes(); // Re-apply filter and refresh display
 
         if (updatesCount > 0 || newQuotesCount > 0) {
-            showMessageBox(`Sync successful! ${newQuotesCount} new quotes added, ${updatesCount} existing quotes updated.`);
+            showMessageBox(`Quotes synced with server! ${newQuotesCount} new quotes added, ${updatesCount} existing quotes updated.`);
         } else {
-            showMessageBox("Sync successful! No new updates from server.");
+            showMessageBox("Quotes synced with server! No new updates.");
         }
 
     } catch (error) {
