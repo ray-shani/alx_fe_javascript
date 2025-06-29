@@ -1,14 +1,64 @@
- <!DOCTYPE html>
-  <html lang="en">
-  <head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dynamic Quote Generator</title>
-  </head>
-  <body>
-    <h1>Dynamic Quote Generator</h1>
-    <div id="quoteDisplay"></div>
-    <button id="newQuote">Show New Quote</button>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Apply Inter font family */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-500 to-purple-600 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg flex flex-col items-center space-y-6">
+        <h1 class="text-4xl font-extrabold text-gray-800 text-center mb-4">Dynamic Quote Generator</h1>
+
+        <!-- Quote Display Section -->
+        <div id="quoteDisplay" class="bg-purple-100 p-6 rounded-lg shadow-inner w-full min-h-[120px] flex flex-col justify-center items-center text-center transition-all duration-300 ease-in-out">
+            <p id="quoteText" class="text-2xl font-semibold text-gray-700 italic">"The only way to do great work is to love what you do."</p>
+            <p id="quoteCategory" class="text-lg text-purple-700 mt-2">- Steve Jobs (Inspiration)</p>
+        </div>
+
+        <!-- Button to Show New Quote -->
+        <button id="newQuote" class="bg-purple-700 hover:bg-purple-800 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-300">
+            Show New Quote
+        </button>
+
+        <hr class="w-full border-t-2 border-gray-200 my-6">
+
+        <!-- Dynamic Quote Addition Section -->
+        <div class="w-full space-y-4">
+            <h2 class="text-2xl font-bold text-gray-800 text-center">Add Your Own Quote</h2>
+            <input id="newQuoteText" type="text" placeholder="Enter a new quote"
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+            <input id="newQuoteCategory" type="text" placeholder="Enter quote category"
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+            <button id="addQuoteButton" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-green-300">
+                Add Quote
+            </button>
+        </div>
+
+        <hr class="w-full border-t-2 border-gray-200 my-6">
+
+        <!-- Import/Export Section -->
+        <div class="w-full space-y-4">
+            <h2 class="text-2xl font-bold text-gray-800 text-center">Manage Quotes (JSON)</h2>
+            <button id="exportQuotesButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                Export Quotes to JSON
+            </button>
+            <label for="importFile" class="block text-gray-700 text-sm font-bold mb-2">Import Quotes from JSON:</label>
+            <input type="file" id="importFile" accept=".json"
+                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer">
+        </div>
+    </div>
+
+    <!-- Custom Message Box Container (will be created and managed by script.js) -->
+    <div id="customMessageBox" class="hidden"></div>
+
     <script src="script.js"></script>
-  </body>
-  </html>
+</body>
+</html>
